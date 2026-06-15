@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GreaseShield Sizing Calculation</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #1A2526;
+    background: #FFFFFF;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 16px 18px 80px; }
+  header.brand {
+    border-bottom: 2px solid #0E5C5C;
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  header.brand h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #0E5C5C;
+    letter-spacing: 0.2px;
+  }
+  .header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+  .unit-toggle {
+    display: inline-flex;
+    background: #ECF3F3;
+    border-radius: 8px;
+    padding: 3px;
+    border: 1px solid #D8E2E3;
+  }
+  .unit-toggle button {
+    background: transparent;
+    border: 0;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #5F6F70;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  .unit-toggle button.active {
+    background: #0E5C5C;
+    color: #FFFFFF;
+    box-shadow: 0 1px 3px rgba(14,92,92,0.25);
+  }
+  section.card {
+    background: #F7FAFA;
+    border: 1px solid #D8E2E3;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+  section.card h2 {
+    margin: 0 0 10px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #0E5C5C;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 10px;
+  }
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #455657;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  input[type=text], input[type=number], input[type=date], select {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid #C3D3D4;
+    border-radius: 6px;
+    font-size: 15px;
+    background: #FFFFFF;
+    color: #1A2526;
+    font-family: inherit;
+  }
+  input:focus, select:focus {
+    outline: 2px solid #1A8B8B;
+    outline-offset: 0;
+    border-color: #1A8B8B;
+  }
+  .invalid-input {
+    border-color: #D9534F;
+    box-shadow: 0 0 0 1px rgba(217,83,79,0.25);
+  }
+  .error-text {
+    color: #D9534F;
+    font-size: 11px;
+    margin-top: 4px;
+    min-height: 16px;
+  }
+  .bowl-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 1fr 1fr 110px;
+    gap: 8px;
+    align-items: end;
+    padding: 8px 0;
+    border-top: 1px dashed #D8E2E3;
+  }
+  .bowl-row:first-of-type { border-top: 0; }
+  .bowl-row .bowl-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0E5C5C;
+    padding-bottom: 9px;
+  }
+  .bowl-row .vol {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-size: 14px;
+    color: #1A2526;
+    padding-bottom: 9px;
+  }
+  @media (max-width: 560px) {
+    .bowl-row { grid-template-columns: 1fr 1fr 1fr; gap: 6px 8px; }
+    .bowl-row .bowl-label { grid-column: 1 / -1; padding-bottom: 0; }
+    .bowl-row .vol { grid-column: 1 / -1; text-align: left; padding-bottom: 0; padding-top: 4px; font-weight: 600; }
+  }
+  .bowl-controls { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  button.btn { background: #0E5C5C; color: #FFFFFF; border: 0; padding: 9px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  button.btn.secondary { background: #FFFFFF; color: #0E5C5C; border: 1px solid #0E5C5C; }
+  button.btn.ghost { background: transparent; color: #5F6F70; border: 1px solid #C3D3D4; }
+  button.btn:hover { filter: brightness(0.95); }
+  .toggle-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .toggle-row input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
+  .toggle-row label { margin: 0; text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 600; color: #1A2526; cursor: pointer; }
+  table.calc { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  table.calc th, table.calc td { padding: 7px 8px; text-align: left; border-bottom: 1px solid #E4ECED; }
+  table.calc th { background: #ECF3F3; color: #0E5C5C; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+  table.calc td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.calc tr.total td { background: #F2F8F8; font-weight: 700; color: #0E5C5C; border-top: 2px solid #0E5C5C; }
+  .result { background: linear-gradient(135deg, #0E5C5C 0%, #1A8B8B 100%); color: #FFFFFF; border-radius: 10px; padding: 18px 18px 16px; margin-top: 4px; }
+  .result h2 { color: #FFFFFF; margin: 0 0 10px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.8px; }
+  .result-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 520px) { .result-row { grid-template-columns: 1fr; } }
+  .result-block { background: rgba(255,255,255,0.10); border-radius: 8px; padding: 12px 14px; }
+  .result-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.7px; opacity: 0.85; margin-bottom: 4px; }
+  .result-value { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .result-sub { font-size: 12px; opacity: 0.9; margin-top: 2px; }
+  .pdi-table { margin-top: 14px; font-size: 12px; }
+  details summary { cursor: pointer; font-weight: 600; color: #0E5C5C; padding: 6px 0; user-select: none; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .footer-note { margin-top: 22px; padding-top: 12px; border-top: 1px solid #E4ECED; font-size: 11px; color: #7C8B8C; line-height: 1.5; }
+
+  /* Unit-mode visibility */
+  .us-only { display: none; }
+  body.us-mode .metric-only { display: none !important; }
+  body.us-mode tr.metric-only { display: none !important; }
+  body.us-mode .us-only { display: revert; }
+  body.us-mode span.us-only { display: inline; }
+  body.us-mode div.us-only { display: block; }
+
+  @media print {
+    @page { size: auto; margin: 10mm; }
+    html, body { width: auto; min-height: auto; margin: 0; padding: 0; }
+    body { background: white; color: #000; font-size: 12px; line-height: 1.3; }
+    .wrap { max-width: 100%; margin: 0; padding: 10px; }
+    .header-right, .unit-toggle { display: none !important; }
+    .actions, .no-print, details, .bowl-controls, button, .unit-toggle { display: none !important; }
+    section.card { background: white; border: 1px solid #999; break-inside: avoid; margin-bottom: 8px; padding: 10px; }
+    .grid { gap: 6px; }
+    label { font-size: 10px; }
+    input[type=text], input[type=number], input[type=date], select { padding: 6px 8px; font-size: 11px; }
+    .bowl-row { gap: 6px; }
+    .result { background: white; color: black; border: 2px solid #0E5C5C; padding: 12px; }
+    .result-row { gap: 10px; }
+    .result-value { font-size: 20px; }
+    .result-label, .result-sub, .pdi-table, table.calc { font-size: 11px; }
+    .result-block { padding: 10px 12px; }
+    table.calc th, table.calc td { padding: 5px 6px; }
+    .footer-note { display: none !important; }
+    header.brand { border-color: #0E5C5C; }
+    header.brand h1 { color: #0E5C5C; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="brand">
+    <h1>GreaseShield &middot; Sizing Calculation</h1>
+    <div class="header-right">
+      <div class="unit-toggle no-print" role="tablist" aria-label="Unit system">
+        <button type="button" data-unit="metric" class="active" id="unitMetricBtn">Metric</button>
+        <button type="button" data-unit="us" id="unitUsBtn">US</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="card">
+    <h2>Identification</h2>
+    <div class="grid">
+      <div><label for="site">Site / Customer</label><input type="text" id="site"></div>
+      <div><label for="room">Room Description</label><input type="text" id="room"></div>
+      <div><label for="item">Item Description</label><input type="text" id="item"></div>
+      <div><label for="engineer">Engineer</label><input type="text" id="engineer"></div>
+      <div><label for="surveyDate">Date</label><input type="date" id="surveyDate"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Item 1 &middot; Sink</h2>
+    <div id="bowls"></div>
+    <div class="bowl-controls">
+      <button class="btn secondary" id="addBowl" type="button">+ Add bowl</button>
+      <button class="btn ghost" id="removeBowl" type="button">&minus; Remove bowl</button>
+      <span style="font-size:12px;color:#5F6F70;margin-left:auto;">Drainage Load 75% &middot; Period 2.00 min</span>
+    </div>
+    <table class="calc">
+      <thead><tr><th>Metric</th><th style="text-align:right;">Value</th></tr></thead>
+      <tbody>
+        <tr><td>Total Sink Volume</td><td class="num"><span id="s_vol">0.00</span> <span class="u-vol">L</span></td></tr>
+        <tr><td>Adjusted Volume (&times; 75%)</td><td class="num"><span id="s_adj">0.00</span> <span class="u-vol">L</span></td></tr>
+        <tr><td>Flow Rate (<span class="u-flowmin">L/M</span>)</td><td class="num"><span id="s_lm">0.00</span></td></tr>
+        <tr class="metric-only"><td>Flow Rate (L/S)</td><td class="num"><span id="s_ls">0.00</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <div class="toggle-row">
+      <input type="checkbox" id="useDishwasher">
+      <label for="useDishwasher">Item 2 &middot; Dishwasher discharging to same drain</label>
+    </div>
+    <div id="dwBlock" style="display:none;">
+      <div class="grid">
+        <div>
+          <label for="dwPreset">Dishwasher capacity</label>
+          <select id="dwPreset"></select>
+        </div>
+        <div id="dwCustomWrap" style="display:none;">
+          <label for="dwCustom">Custom capacity (<span class="u-dwunit">L</span>)</label>
+          <input type="number" id="dwCustom" min="0" step="1" value="30">
+          <div class="error-text"></div>
+        </div>
+        <div style="align-self:end;">
+          <span style="font-size:12px;color:#5F6F70;">Drainage Load 100% &middot; Period 1.00 min</span>
+        </div>
+      </div>
+      <table class="calc">
+        <thead><tr><th>Metric</th><th style="text-align:right;">Value</th></tr></thead>
+        <tbody>
+          <tr><td>Dishwasher Volume</td><td class="num"><span id="d_vol">0.00</span> <span class="u-vol">L</span></td></tr>
+          <tr><td>Adjusted Volume (&times; 100%)</td><td class="num"><span id="d_adj">0.00</span> <span class="u-vol">L</span></td></tr>
+          <tr><td>Flow Rate (<span class="u-flowmin">L/M</span>)</td><td class="num"><span id="d_lm">0.00</span></td></tr>
+          <tr class="metric-only"><td>Flow Rate (L/S)</td><td class="num"><span id="d_ls">0.00</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="result">
+    <h2>Required Size &amp; Recommendation</h2>
+    <div class="result-row">
+      <div class="result-block">
+        <div class="result-label">Total Flow Rate</div>
+        <div class="result-value"><span id="t_flow">0.00</span> <span class="u-flow">L/S</span></div>
+        <div class="result-sub">
+          <span class="metric-only"><span id="t_lm">0.00</span> L/M total &middot; </span>
+          sink + dishwasher
+        </div>
+      </div>
+      <div class="result-block">
+        <div class="result-label">PDI Required Size</div>
+        <div class="result-value">PDI <span id="pdi_size">&mdash;</span></div>
+        <div class="result-sub"><span id="pdi_cap">&mdash;</span> <span class="u-flow">L/S</span> capacity row</div>
+      </div>
+    </div>
+    <div class="result-block" style="margin-top:12px;">
+      <div class="result-label">Suggested Product</div>
+      <div class="result-value" style="font-size:20px;"><span id="product">&mdash;</span></div>
+      <div class="result-sub" id="product_sub">Enter sink dimensions to calculate.</div>
+    </div>
+
+  </section>
+
+  <details>
+    <summary>PDI G-101 sizing table reference</summary>
+    <table class="calc pdi-table">
+      <thead>
+        <tr>
+          <th>PDI Size Symbol</th>
+          <th style="text-align:right;">Flow (GPM)</th>
+          <th style="text-align:right;">Flow (L/S)</th>
+          <th style="text-align:right;">Flow (L/M)</th>
+        </tr>
+      </thead>
+      <tbody id="pdiTableBody"></tbody>
+    </table>
+  </details>
+
+  <div class="actions no-print">
+    <button class="btn" id="printBtn" type="button">Print / Save as PDF</button>
+    <button class="btn secondary" id="copyBtn" type="button">Copy worksheet to clipboard</button>
+    <button class="btn ghost" id="resetBtn" type="button">Reset</button>
+  </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  // ---------- Constants ----------
+  const IN_TO_MM = 25.4;
+  const GAL_TO_L = 3.785411784;
+  const LM_TO_GPM = 1 / GAL_TO_L;
+  const LS_TO_GPM = 60 / GAL_TO_L;
+
+  // ---------- PDI table (canonical L/S; GPM derived) ----------
+  const PDI = [
+    { size: 4,   ls: 0.25 }, { size: 7,   ls: 0.44 },
+    { size: 10,  ls: 0.63 }, { size: 15,  ls: 0.95 },
+    { size: 20,  ls: 1.26 }, { size: 25,  ls: 1.58 },
+    { size: 35,  ls: 2.21 }, { size: 50,  ls: 3.15 },
+    { size: 75,  ls: 4.73 }, { size: 100, ls: 6.31 }
+  ];
+
+  // ---------- Unit configs ----------
+  const UNIT_CONFIG = {
+    metric: {
+      dim: "mm", vol: "L", flow: "L/S", flowMin: "L/M",
+      dwUnit: "L", dimStep: "1",
+      dwPresets: [
+        { v: 20, label: "20 L — Undercounter" },
+        { v: 30, label: "30 L — Standard hood" },
+        { v: 40, label: "40 L — Larger hood" }
+      ],
+      dwDefaultPreset: "30",
+      dwCustomDefault: 30
+    },
+    us: {
+      dim: "in", vol: "gal", flow: "GPM", flowMin: "GPM",
+      dwUnit: "gal", dimStep: "0.5",
+      dwPresets: [
+        { v: 5,  label: "5 gal — Undercounter" },
+        { v: 8,  label: "8 gal — Standard hood" },
+        { v: 11, label: "11 gal — Larger hood" }
+      ],
+      dwDefaultPreset: "8",
+      dwCustomDefault: 8
+    }
+  };
+
+  // ---------- State ----------
+  let unitMode = "metric";
+  try { unitMode = localStorage.getItem("gsUnit") || "metric"; } catch (e) {}
+  if (unitMode !== "metric" && unitMode !== "us") unitMode = "metric";
+
+  let bowls = [];
+
+  const $ = (id) => document.getElementById(id);
+  const cfg = () => UNIT_CONFIG[unitMode];
+
+  function makeBowl(idx) { return { id: idx, L: 0, W: 0, H: 0 }; }
+
+  // ---------- Stored dimension conversion on unit toggle ----------
+  function convertStoredDims(fromUnit, toUnit) {
+    if (fromUnit === toUnit) return;
+    bowls.forEach(b => {
+      ["L","W","H"].forEach(k => {
+        const v = Number(b[k]) || 0;
+        if (!v) { b[k] = 0; return; }
+        if (toUnit === "metric") b[k] = Math.round(v * IN_TO_MM);
+        else                      b[k] = +(v / IN_TO_MM).toFixed(1);
+      });
+    });
+    const dwCustom = $("dwCustom");
+    if (dwCustom && dwCustom.value) {
+      const v = Number(dwCustom.value) || 0;
+      if (toUnit === "metric") dwCustom.value = Math.round(v * GAL_TO_L);
+      else                      dwCustom.value = +(v / GAL_TO_L).toFixed(1);
+    }
+  }
+
+  // ---------- Volume math (canonical: litres) ----------
+  function bowlVolumeL(b) {
+    const L = Number(b.L) || 0;
+    const W = Number(b.W) || 0;
+    const H = Number(b.H) || 0;
+    if (unitMode === "metric") return (L * W * H) / 1000000;
+    return (L * IN_TO_MM) * (W * IN_TO_MM) * (H * IN_TO_MM) / 1000000;
+  }
+
+  function dishwasherVolumeL() {
+    if (!$("useDishwasher").checked) return 0;
+    const presetVal = $("dwPreset").value;
+    const raw = (presetVal === "custom")
+      ? (Number($("dwCustom").value) || 0)
+      : (Number(presetVal) || 0);
+    return unitMode === "metric" ? raw : raw * GAL_TO_L;
+  }
+
+  // ---------- Display converters ----------
+  function displayVol(L)      { return unitMode === "metric" ? L : (L / GAL_TO_L); }
+  function displayFlowMin(LM) { return unitMode === "metric" ? LM : (LM * LM_TO_GPM); }
+  function displayFlowSec(LS) { return unitMode === "metric" ? LS : (LS * LS_TO_GPM); }
+
+  // ---------- PDI lookup (canonical L/S) ----------
+  function pickPdi(totalLs) {
+    if (!totalLs || totalLs <= 0) return null;
+    for (const row of PDI) if (row.ls >= totalLs) return row;
+    return PDI[PDI.length - 1];
+  }
+
+  // ---------- Product mapping ----------
+  function suggestProduct(pdiSize, hasDishwasher) {
+    if (pdiSize == null) return { name: "—", note: "Enter sink dimensions to calculate." };
+    if (pdiSize <= 10) return { name: "GS1000-PF", note: "Small load. -PF (Pre-Filter) is the typical variant for single sinks." };
+    if (pdiSize <= 15) return {
+      name: hasDishwasher ? "GS1500-DPF" : "GS1000-PF / GS1500-DPF",
+      note: hasDishwasher
+        ? "PreRinse + dishwasher combos typically take a -DPF (Drawer Pre-Filter) at this tier."
+        : "Sink-only at this flow can take a GS1000-PF; choose GS1500-DPF if solids load is high."
+    };
+    if (pdiSize <= 20) return { name: "GS1850-PF (baseline) / GS1500-DPF / GS2000-PF", note: "Three options observed in real reports at this tier — variant depends on application, solids, and site context." };
+    if (pdiSize <= 25) return { name: "GS2000-PF / GS2000-DPF", note: "High-flow combos. -DPF preferred when solids load is significant." };
+    if (pdiSize <= 35) return { name: "GS3000 family", note: "Beyond the GS2000 capacity tier — confirm against current catalogue." };
+    return { name: "GS4000 family or larger", note: "Heavy commercial / industrial. Confirm against current catalogue and consult engineering." };
+  }
+
+  // ---------- Rendering ----------
+  function renderBowls() {
+    const wrap = $("bowls");
+    wrap.innerHTML = "";
+    const u = cfg();
+    bowls.forEach((b, i) => {
+      const volStr = displayVol(bowlVolumeL(b)).toFixed(2) + " " + u.vol;
+      const row = document.createElement("div");
+      row.className = "bowl-row";
+      row.innerHTML =
+        `<div class="bowl-label">Bowl ${i + 1}</div>` +
+        `<div><label>Length (${u.dim})</label>` +
+          `<input type="number" min="0" step="${u.dimStep}" data-bowl="${i}" data-dim="L" value="${b.L || ""}">` +
+          `<div class="error-text"></div></div>` +
+        `<div><label>Width (${u.dim})</label>` +
+          `<input type="number" min="0" step="${u.dimStep}" data-bowl="${i}" data-dim="W" value="${b.W || ""}">` +
+          `<div class="error-text"></div></div>` +
+        `<div><label>Height (${u.dim})</label>` +
+          `<input type="number" min="0" step="${u.dimStep}" data-bowl="${i}" data-dim="H" value="${b.H || ""}">` +
+          `<div class="error-text"></div></div>` +
+        `<div class="vol">` +
+          `<span style="font-size:11px;color:#5F6F70;text-transform:uppercase;letter-spacing:0.4px;">Vol</span> ` +
+          `<strong class="bowl-vol">${volStr}</strong></div>`;
+      wrap.appendChild(row);
+    });
+    wrap.querySelectorAll("input").forEach(inp => inp.addEventListener("input", onBowlInput));
+  }
+
+  function getValidationMessage(value, isRequired) {
+    if (value === "") return isRequired ? "This field is required." : null;
+    const num = Number(value);
+    if (Number.isNaN(num)) return "Enter a valid number.";
+    if (num <= 0) return "Value must be greater than zero.";
+    return null;
+  }
+
+  function setFieldValidation(input, isRequired = false) {
+    const errorText = getValidationMessage(input.value.trim(), isRequired);
+    const errorEl = input.parentElement.querySelector(".error-text");
+    if (errorText) {
+      input.classList.add("invalid-input");
+      if (errorEl) errorEl.textContent = errorText;
+      return false;
+    }
+    input.classList.remove("invalid-input");
+    if (errorEl) errorEl.textContent = "";
+    return true;
+  }
+
+  function validateBowlInput(input) {
+    const valid = setFieldValidation(input, false);
+    const value = input.value.trim();
+    const i = Number(input.dataset.bowl);
+    const d = input.dataset.dim;
+    bowls[i][d] = valid && value !== "" ? Number(value) : 0;
+    return valid;
+  }
+
+  function validateDishwasherCustom() {
+    const dwCustom = $("dwCustom");
+    if (!$("useDishwasher").checked || $("dwPreset").value !== "custom") {
+      if (dwCustom) {
+        dwCustom.classList.remove("invalid-input");
+        const errorEl = dwCustom.parentElement.querySelector(".error-text");
+        if (errorEl) errorEl.textContent = "";
+      }
+      return true;
+    }
+    return setFieldValidation(dwCustom, true);
+  }
+
+  function onBowlInput(e) {
+    validateBowlInput(e.target);
+    const row = e.target.closest(".bowl-row");
+    if (row) {
+      const i = Number(e.target.dataset.bowl);
+      row.querySelector(".bowl-vol").textContent =
+        displayVol(bowlVolumeL(bowls[i])).toFixed(2) + " " + cfg().vol;
+    }
+    recalc();
+  }
+
+  function renderDwPresets() {
+    const sel = $("dwPreset");
+    sel.innerHTML = "";
+    cfg().dwPresets.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.v;
+      opt.textContent = p.label;
+      sel.appendChild(opt);
+    });
+    const customOpt = document.createElement("option");
+    customOpt.value = "custom";
+    customOpt.textContent = "Custom…";
+    sel.appendChild(customOpt);
+    sel.value = cfg().dwDefaultPreset;
+  }
+
+  function renderPdiTable() {
+    $("pdiTableBody").innerHTML = PDI.map(r =>
+      `<tr><td>${r.size}</td>` +
+      `<td class="num">${(r.ls * LS_TO_GPM).toFixed(2)}</td>` +
+      `<td class="num">${r.ls.toFixed(2)}</td>` +
+      `<td class="num">${(r.ls * 60).toFixed(2)}</td></tr>`
+    ).join("");
+  }
+
+  function refreshUnitLabels() {
+    const u = cfg();
+    document.querySelectorAll(".u-vol").forEach(el => el.textContent = u.vol);
+    document.querySelectorAll(".u-flow").forEach(el => el.textContent = u.flow);
+    document.querySelectorAll(".u-flowmin").forEach(el => el.textContent = u.flowMin);
+    document.querySelectorAll(".u-dwunit").forEach(el => el.textContent = u.dwUnit);
+    document.querySelectorAll(".u-dim").forEach(el => el.textContent = u.dim);
+    document.body.classList.toggle("us-mode", unitMode === "us");
+    $("unitMetricBtn").classList.toggle("active", unitMode === "metric");
+    $("unitUsBtn").classList.toggle("active", unitMode === "us");
+  }
+
+  // ---------- Main calc ----------
+  function recalc() {
+    validateDishwasherCustom();
+    const sinkVolL = bowls.reduce((a, b) => a + bowlVolumeL(b), 0);
+    const sinkAdjL = sinkVolL * 0.75;
+    const sinkLM   = sinkAdjL / 2.00;
+    const sinkLS   = sinkLM / 60;
+
+    $("s_vol").textContent = displayVol(sinkVolL).toFixed(2);
+    $("s_adj").textContent = displayVol(sinkAdjL).toFixed(2);
+    $("s_lm").textContent  = displayFlowMin(sinkLM).toFixed(2);
+    $("s_ls").textContent  = sinkLS.toFixed(2);
+
+    const dwVolL = dishwasherVolumeL();
+    const dwAdjL = dwVolL * 1.00;
+    const dwLM   = dwAdjL / 1.00;
+    const dwLS   = dwLM / 60;
+
+    $("d_vol").textContent = displayVol(dwVolL).toFixed(2);
+    $("d_adj").textContent = displayVol(dwAdjL).toFixed(2);
+    $("d_lm").textContent  = displayFlowMin(dwLM).toFixed(2);
+    $("d_ls").textContent  = dwLS.toFixed(2);
+
+    const totalLM = sinkLM + dwLM;
+    const totalLS = totalLM / 60;
+    $("t_lm").textContent   = totalLM.toFixed(2);
+    $("t_flow").textContent = displayFlowSec(totalLS).toFixed(2);
+
+    const pdi = pickPdi(totalLS);
+    if (pdi) {
+      $("pdi_size").textContent = pdi.size;
+      $("pdi_cap").textContent  = unitMode === "metric"
+        ? pdi.ls.toFixed(2)
+        : (pdi.ls * LS_TO_GPM).toFixed(2);
+    } else {
+      $("pdi_size").textContent = "—";
+      $("pdi_cap").textContent  = "—";
+    }
+
+    const prod = suggestProduct(pdi ? pdi.size : null, $("useDishwasher").checked);
+    $("product").textContent   = prod.name;
+    $("product_sub").textContent = prod.note;
+  }
+
+  // ---------- Unit toggle ----------
+  function setUnit(newUnit) {
+    if (newUnit === unitMode) return;
+    const oldUnit = unitMode;
+    convertStoredDims(oldUnit, newUnit);
+    unitMode = newUnit;
+    try { localStorage.setItem("gsUnit", unitMode); } catch (e) {}
+    const wasCustom = ($("dwPreset").value === "custom");
+    renderDwPresets();
+    if (wasCustom) $("dwPreset").value = "custom";
+    if (!$("dwCustom").value) $("dwCustom").value = cfg().dwCustomDefault;
+    refreshUnitLabels();
+    renderBowls();
+    recalc();
+  }
+
+  // ---------- Copy to clipboard ----------
+  function copyWorksheet() {
+    const u = cfg();
+    const lines = [];
+    lines.push("GREASESHIELD SIZING CALCULATION", "================================");
+    lines.push(`Units:     ${unitMode === "metric" ? "Metric (mm / L / L·s⁻¹)" : "US (in / gal / GPM)"}`);
+    lines.push(`Site:      ${$("site").value || "—"}`);
+    lines.push(`Room:      ${$("room").value || "—"}`);
+    lines.push(`Item:      ${$("item").value || "—"}`);
+    lines.push(`Engineer:  ${$("engineer").value || "—"}`);
+    lines.push(`Date:      ${$("surveyDate").value || "—"}`, "");
+    lines.push("ITEM 1 — SINK");
+    bowls.forEach((b, i) => {
+      const v = displayVol(bowlVolumeL(b)).toFixed(2);
+      lines.push(`  Bowl ${i + 1}: ${b.L || 0} × ${b.W || 0} × ${b.H || 0} ${u.dim} = ${v} ${u.vol}`);
+    });
+    lines.push(`  Total Sink Volume:     ${$("s_vol").textContent} ${u.vol}`);
+    lines.push(`  Adjusted (×75%):       ${$("s_adj").textContent} ${u.vol}`);
+    if (unitMode === "metric") {
+      lines.push(`  Flow:                  ${$("s_lm").textContent} L/M | ${$("s_ls").textContent} L/S`);
+    } else {
+      lines.push(`  Flow:                  ${$("s_lm").textContent} GPM`);
+    }
+    if ($("useDishwasher").checked) {
+      lines.push("", "ITEM 2 — DISHWASHER");
+      lines.push(`  Volume:                ${$("d_vol").textContent} ${u.vol}`);
+      lines.push(`  Adjusted (×100%):      ${$("d_adj").textContent} ${u.vol}`);
+      if (unitMode === "metric") {
+        lines.push(`  Flow:                  ${$("d_lm").textContent} L/M | ${$("d_ls").textContent} L/S`);
+      } else {
+        lines.push(`  Flow:                  ${$("d_lm").textContent} GPM`);
+      }
+    }
+    lines.push("", "RESULT");
+    if (unitMode === "metric") {
+      lines.push(`  Total Flow:            ${$("t_lm").textContent} L/M | ${$("t_flow").textContent} L/S`);
+      lines.push(`  PDI Required Size:     ${$("pdi_size").textContent}  (capacity ${$("pdi_cap").textContent} L/S)`);
+    } else {
+      lines.push(`  Total Flow:            ${$("t_flow").textContent} GPM`);
+      lines.push(`  PDI Required Size:     ${$("pdi_size").textContent}  (capacity ${$("pdi_cap").textContent} GPM)`);
+    }
+    lines.push(`  Suggested Product:     ${$("product").textContent}`);
+    lines.push(`  Note:                  ${$("product_sub").textContent}`);
+    const text = lines.join("\n");
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = $("copyBtn"), orig = btn.textContent;
+      btn.textContent = "Copied!";
+      setTimeout(() => btn.textContent = orig, 1500);
+    }).catch(() => alert("Copy failed — worksheet text:\n\n" + text));
+  }
+
+  // ---------- Init ----------
+  function init() {
+    bowls = [ makeBowl(0) ];
+
+    const d = new Date();
+    $("surveyDate").value = d.toISOString().slice(0, 10);
+
+    renderDwPresets();
+    $("dwCustom").value = cfg().dwCustomDefault;
+
+    $("addBowl").addEventListener("click", () => {
+      if (bowls.length >= 6) return;
+      bowls.push(makeBowl(bowls.length));
+      renderBowls();
+      recalc();
+    });
+    $("removeBowl").addEventListener("click", () => {
+      if (bowls.length <= 1) return;
+      bowls.pop();
+      renderBowls();
+      recalc();
+    });
+
+    $("useDishwasher").addEventListener("change", () => {
+      $("dwBlock").style.display = $("useDishwasher").checked ? "" : "none";
+      recalc();
+    });
+    $("dwPreset").addEventListener("change", () => {
+      $("dwCustomWrap").style.display = ($("dwPreset").value === "custom") ? "" : "none";
+      recalc();
+    });
+    $("dwCustom").addEventListener("input", recalc);
+
+    document.querySelectorAll(".unit-toggle button").forEach(btn => {
+      btn.addEventListener("click", () => setUnit(btn.dataset.unit));
+    });
+
+    $("printBtn").addEventListener("click", () => window.print());
+    $("resetBtn").addEventListener("click", () => {
+      if (!confirm("Reset the worksheet? Unit preference will be kept.")) return;
+      bowls = [ makeBowl(0) ];
+      ["site","room","item","engineer"].forEach(id => $(id).value = "");
+      $("useDishwasher").checked = false;
+      $("dwBlock").style.display = "none";
+      renderDwPresets();
+      $("dwCustomWrap").style.display = "none";
+      $("dwCustom").value = cfg().dwCustomDefault;
+      renderBowls();
+      recalc();
+    });
+    $("copyBtn").addEventListener("click", copyWorksheet);
+
+    refreshUnitLabels();
+    renderPdiTable();
+    renderBowls();
+    recalc();
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})();
+</script>
+</body>
+</html>
